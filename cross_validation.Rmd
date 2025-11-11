@@ -1,0 +1,71 @@
+---
+title: "cross_validation"
+author: "Kimia Faroughi"
+date: "2025-11-11"
+output: github_document
+---
+
+Load packages 
+
+```{r}
+library(tidyverse)
+library(p8105.datasets)
+library(modelr)
+```
+
+Import data
+
+```{r}
+data("lidar")
+```
+
+Look at the data
+
+```{r}
+lidar
+
+lidar_df = 
+  lidar |> 
+  mutate(id = row_number())
+
+lidar_df |> 
+  ggplot(aes(x = range, y = logratio)) +
+  geom_point()
+```
+
+## Create dataframes
+
+```{r}
+train_df =
+  sample_frac(lidar_df, size = .8) |> #80% of data
+  arrange(id)
+
+test_df = anti_join(lidar_df, train_df, by = "id") #rows in lidar_df that did not show up in train_df
+```
+
+Look at these
+
+```{r}
+ggplot(train_df, aes(x = range, y = logratio)) +
+  geom_point() +
+  geom_point(data = test_df, color = "red")
+```
+
+Fit a few modles to `train_df`
+
+```{r}
+linear_mod = lm(logratio ~ range, data = train_df) #using linear_mod doesn't do as good as a job as smooth_mod
+smooth_mod = mgcv::gam(logratio ~ s(range), data = train_df)
+wiggly_mod = mgcv::gam(logratio ~ s(range, k = 30), sp = 10e-6, data = train_df) #don't do this
+```
+
+Look at this
+
+```{r}
+train_df |> 
+  add_predictions(smooth_mod) |> 
+  ggplot(aes(x = range, y = logratio)) +
+  geom_point() +
+  geom_line(aes(y = pred), color = "red")
+```
+
